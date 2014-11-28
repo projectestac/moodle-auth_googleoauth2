@@ -40,6 +40,10 @@ function googleoauth2_html_button($authurl, $providerdisplaystyle, $provider) {
  * @return array
  */
 function provider_list() {
+    //XTEC ************ AFEGIT - Only let use Google OAuth
+    //2014.08.15  @pferre22
+    return array('google');
+    //************ FI
     return array('google', 'facebook', 'battlenet', 'github', 'linkedin', 'messenger', 'microsoft', 'vk', 'dropbox');
 }
 
