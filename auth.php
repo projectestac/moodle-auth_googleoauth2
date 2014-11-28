@@ -303,7 +303,7 @@ class auth_plugin_googleoauth2 extends auth_plugin_base {
                             $newuser->lastname = $userdetails->lastName;
                             break;
                     }
-                    
+
                     $username = $userprefix . $lastusernumber;
                     //XTEC ************ MODIFICAT - Convert names to Title
                     //2014.09.19 @pferre22
@@ -338,6 +338,11 @@ class auth_plugin_googleoauth2 extends auth_plugin_base {
                     create_user_record($username, '', 'googleoauth2');
                 } else {
                     $username = $user->username;
+                    //XTEC ************ AFEGIT - To be able to login even if the auth method is different
+                    //2014.09.15 @pferre22
+                    $old_authmethod = $user->auth;
+                    $DB->set_field('user', 'auth', 'googleoauth2', array('id'=>$user->id));
+                    ////************ FI
                 }
 
                 // Authenticate the user.
@@ -345,7 +350,12 @@ class auth_plugin_googleoauth2 extends auth_plugin_base {
                 $userid = empty($user) ? 'new user' : $user->id;
                 $user = authenticate_user_login($username, null);
                 if (isset($user->id)) {
-
+                //XTEC ************ AFEGIT - To be able to login even if the auth method is different
+                //2014.09.15 @pferre22
+                if (empty($newuser)) {
+                    $DB->set_field('user', 'auth', $old_authmethod, array('id'=>$userid));
+                }
+                ////************ FI
                     // Set a cookie to remember what auth provider was selected.
                     setcookie('MOODLEGOOGLEOAUTH2_'.$CFG->sessioncookie, $authprovider,
                             time() + (DAYSECS * 60), $CFG->sessioncookiepath,
