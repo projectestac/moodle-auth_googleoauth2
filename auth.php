@@ -303,9 +303,13 @@ class auth_plugin_googleoauth2 extends auth_plugin_base {
                             $newuser->lastname = $userdetails->lastName;
                             break;
                     }
-
+                    
                     $username = $userprefix . $lastusernumber;
-
+                    //XTEC ************ MODIFICAT - Convert names to Title
+                    //2014.09.19 @pferre22
+                    $newuser->firstname = core_text::strtotitle($newuser->firstname);
+                    $newuser->lastname = core_text::strtotitle($newuser->lastname);
+                    //************ FI
                     // Some providers allow empty firstname and lastname.
                     if (empty($userdetails->firstname)) {
                         $userdetails->firstname = get_string('unknownfirstname', 'auth_googleoauth2');
