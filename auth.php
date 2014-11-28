@@ -110,7 +110,7 @@ class auth_plugin_googleoauth2 extends auth_plugin_base {
     function can_create_new_user() {
         return ( $this->config->donotcreatenewuser != 1 );
     }
- 
+
     /**
      * Returns the user information for 'external' users.
      *
@@ -196,7 +196,7 @@ class auth_plugin_googleoauth2 extends auth_plugin_base {
                 if ($err = email_is_not_allowed($userdetails->email)) {
                     throw new moodle_exception($err, 'auth_googleoauth2');
                 }
-			
+
                 // Throw an error if the email address is not verified.
                 if (!$userdetails->emailverified) {
                     throw new moodle_exception('emailaddressmustbeverified', 'auth_googleoauth2');
@@ -229,13 +229,20 @@ class auth_plugin_googleoauth2 extends auth_plugin_base {
                     // Mutual Lock plugin activities
                     $timeout = 5; // 5 seconds.
                     // A namespace for the locks. Must be prefixed with the component name to prevent conflicts.
-                    $locktype = 'auth_googleoauth2'; 
+                    $locktype = 'auth_googleoauth2';
                     $resource = 'usercreationnumber';
- 
+
                     // Get an instance of the currently configured lock_factory.
                     $lockfactory = \core\lock\lock_config::get_lock_factory('auth_googleoauth2');
+                    //XTEC ************ AFEGIT - To restrict domain
+                    //2014.09.16 @pferre22
+                    if (!$this->email_auth_domain($userdetails->email)) {
+                        throw new moodle_exception('emailonlyallowed', '', '', get_config('auth/googleoauth2', 'auth_domain'));
+                    }
+                    //************* FI
 
-                    // Start to count from last saved config
+                    // Get following incremented username.
+                    $googleuserprefix = core_text::strtolower(get_config('auth/googleoauth2', 'googleuserprefix'));
                     $lastusernumber = $this->config->lastusernumber;
                     $lastusernumber = empty($lastusernumber) ? 1 : $lastusernumber + 1;
 
@@ -432,9 +439,271 @@ class auth_plugin_googleoauth2 extends auth_plugin_base {
      * @param string $error
      * @param array $user_fields
      * @return void
+     * TODO: as print_auth_lock_options() core function displays an old-fashion HTML table, I didn't bother writing
+     * some proper Moodle code. This code is similar to other auth plugins (04/09/11)
      */
-    function config_form($config, $err, $user_fields) {
-        include 'config.html';
+    public function config_form($config, $err, $userfields) {
+        global $OUTPUT, $CFG;
+
+        echo '<div class="alert alert-success"  role="alert">' . get_string('supportmaintenance', 'auth_googleoauth2') . '</div>';
+
+
+        // TODO: replace this table html ugliness by some nice bootstrap html code.
+        echo '<table cellspacing="0" cellpadding="5" border="0">
+            <tr>
+               <td colspan="3">
+                    <h2 class="main">';
+
+        print_string('auth_googlesettings', 'auth_googleoauth2');
+
+        $providers = provider_list();
+
+        foreach ($providers as $providername) {
+
+            $clientidname = $providername . 'clientid';
+            $clientsecretname = $providername . 'clientsecret';
+
+            // Set to defaults if undefined.
+            if (!isset($config->{$clientidname})) {
+                $config->{$clientidname} = '';
+            }
+            if (!isset($config->{$clientsecretname})) {
+                $config->{$clientsecretname} = '';
+            }
+
+            // Client id.
+
+            echo '</h2>
+               </td>
+            </tr>
+            <tr  style="vertical-align: top;">
+                <td align="right"><label for="'.$clientidname.'">';
+
+            print_string('auth_'.$clientidname.'_key', 'auth_googleoauth2');
+
+            echo '</label></td><td>';
+
+            echo html_writer::empty_tag('input',
+                array('type' => 'text', 'id' => $clientidname, 'name' => $clientidname,
+                    'class' => $clientidname, 'value' => $config->{$clientidname}));
+
+            if (isset($err[$clientidname])) {
+                echo $OUTPUT->error_text($err[$clientidname]);
+            }
+
+            echo '</td><td>';
+            $parse = parse_url($CFG->wwwroot);
+            print_string('auth_'.$clientidname, 'auth_googleoauth2',
+                array('jsorigins' => $parse['scheme'].'://'.$parse['host'], 'siteurl' => $CFG->httpswwwroot,
+                    'domain' => $CFG->httpswwwroot,
+                    'redirecturls' => $CFG->httpswwwroot . '/auth/googleoauth2/'.$providername.'_redirect.php',
+                    'callbackurl' => $CFG->httpswwwroot . '/auth/googleoauth2/'.$providername.'_redirect.php',
+                    'sitedomain' => $parse['host']));
+
+            echo '</td></tr>';
+
+            // Client secret.
+
+            echo '<tr  style="vertical-align: top;">
+                <td align="right"><label for="'.$clientsecretname.'">';
+
+            print_string('auth_'.$clientsecretname.'_key', 'auth_googleoauth2');
+
+            echo '</label></td><td>';
+
+            echo html_writer::empty_tag('input',
+                array('type' => 'text', 'id' => $clientsecretname, 'name' => $clientsecretname,
+                    'class' => $clientsecretname, 'value' => $config->{$clientsecretname}));
+
+            if (isset($err[$clientsecretname])) {
+                echo $OUTPUT->error_text($err[$clientsecretname]);
+            }
+
+            echo '</td><td>';
+
+            print_string('auth_'.$clientsecretname, 'auth_googleoauth2');
+
+            echo '</td></tr>
+            <tr style="min-height: 20px"><td>&nbsp;</td></tr>';
+        }
+
+        //XTEC ************ AFEGIT - To restrict domain
+        //2014.09.16 @pferre22
+        if (!isset($config->auth_domain)) {
+            $config->auth_domain = '';
+        }
+
+        echo '<tr>
+                <td align="right"><label for="auth_domain">';
+
+        print_string('allowemailaddresses', 'admin');
+
+        echo '</label></td><td>';
+
+
+        echo html_writer::empty_tag('input',
+                array('type' => 'text', 'id' => 'auth_domain', 'name' => 'auth_domain',
+                    'class' => 'auth_domain', 'value' => $config->auth_domain));
+
+        if (isset($err["auth_domain"])) {
+            echo $OUTPUT->error_text($err["auth_domain"]);
+        }
+
+        echo '</td><td>';
+
+        print_string('configallowemailaddresses', 'admin') ;
+
+        echo '</td></tr>';
+        //***********************FI
+
+        if (!isset($config->googleipinfodbkey)) {
+            $config->googleipinfodbkey = '';
+        }
+
+        if (!isset($config->googleuserprefix)) {
+            $config->googleuserprefix = 'social_user_';
+        }
+
+        if (!isset($config->oauth2displaybuttons)) {
+            $config->oauth2displaybuttons = 1;
+        }
+
+        // IPinfoDB.
+
+        echo '<tr>
+                <td align="right"><label for="googleipinfodbkey">';
+
+        print_string('auth_googleipinfodbkey_key', 'auth_googleoauth2');
+
+        echo '</label></td><td>';
+
+        echo html_writer::empty_tag('input',
+                array('type' => 'text', 'id' => 'googleipinfodbkey', 'name' => 'googleipinfodbkey',
+                    'class' => 'googleipinfodbkey', 'value' => $config->googleipinfodbkey));
+
+        if (isset($err["googleipinfodbkey"])) {
+            echo $OUTPUT->error_text($err["googleipinfodbkey"]);
+        }
+
+        echo '</td><td>';
+
+        print_string('auth_googleipinfodbkey', 'auth_googleoauth2', (object) array('website' => $CFG->wwwroot));
+
+        echo '</td></tr>';
+
+        // User prefix.
+
+        echo '<tr>
+                <td align="right"><label for="googleuserprefix">';
+
+        print_string('auth_googleuserprefix_key', 'auth_googleoauth2');
+
+        echo '</label></td><td>';
+
+        echo html_writer::empty_tag('input',
+                array('type' => 'text', 'id' => 'googleuserprefix', 'name' => 'googleuserprefix',
+                    'class' => 'googleuserprefix', 'value' => $config->googleuserprefix));
+
+        if (isset($err["googleuserprefix"])) {
+            echo $OUTPUT->error_text($err["googleuserprefix"]);
+        }
+
+        echo '</td><td>';
+
+        print_string('auth_googleuserprefix', 'auth_googleoauth2');
+
+        echo '</td></tr>';
+
+        // Display buttons.
+
+        echo '<tr>
+                <td align="right"><label for="oauth2displaybuttons">';
+
+        print_string('oauth2displaybuttons', 'auth_googleoauth2');
+
+        echo '</label></td><td>';
+
+        $checked = empty($config->oauth2displaybuttons) ? '' : 'checked';
+        echo html_writer::checkbox('oauth2displaybuttons', 1, $checked, '',
+            array('type' => 'checkbox', 'id' => 'oauth2displaybuttons', 'class' => 'oauth2displaybuttons'));
+
+        if (isset($err["oauth2displaybuttons"])) {
+            echo $OUTPUT->error_text($err["oauth2displaybuttons"]);
+        }
+
+        echo '</td><td>';
+
+        $code = '<code>&lt;?php require_once($CFG-&gt;dirroot . \'/auth/googleoauth2/lib.php\');
+                auth_googleoauth2_display_buttons(); ?&gt;</code>';
+        print_string('oauth2displaybuttonshelp', 'auth_googleoauth2', $code);
+
+        echo '</td></tr>';
+
+
+        // Block field options.
+        // Hidden email options - email must be set to: locked.
+        echo html_writer::empty_tag('input', array('type' => 'hidden', 'value' => 'locked',
+                    'name' => 'lockconfig_field_lock_email'));
+
+        // Display other field options.
+        foreach ($userfields as $key => $userfield) {
+            if ($userfield == 'email') {
+                unset($userfields[$key]);
+            }
+        }
+        print_auth_lock_options('googleoauth2', $userfields, get_string('auth_fieldlocks_help', 'auth'), false, false);
+
+        echo '</table>';
+
+        // Calculate how many login per providers.
+        $providerstats = (object) $this->get_stats();
+        $strothermoodle = get_string('othermoodle', 'auth_googleoauth2');
+        $strstattitle = get_string('stattitle', 'auth_googleoauth2', $providerstats);
+        echo '
+            <center>
+            <script type="text/javascript" src="https://www.google.com/jsapi"></script>
+                <script type="text/javascript">
+                  google.load("visualization", "1", {packages:["corechart"]});
+                  google.setOnLoadCallback(drawChart);
+                  function drawChart() {
+
+                    var data = google.visualization.arrayToDataTable([
+                      [\'Provider\', \'Login total\'],
+                      [\'Google\', ' . $providerstats->google . '],
+                      [\'Facebook\', ' . $providerstats->facebook . ' ],
+                      [\'Github\',  ' . $providerstats->github . ' ],
+                      [\'Linkedin\', ' . $providerstats->linkedin . ' ],
+                      [\'Microsoft\', ' . $providerstats->microsoft . ' ],
+                      [\'Dropbox\', ' . $providerstats->dropbox . ' ],
+                      [\'VK\', ' . $providerstats->vk . ' ],
+                      [\'Battle.net\', ' . $providerstats->battlenet . ' ],
+                      [\''.$strothermoodle.'\',    ' . $providerstats->moodle . ' ]
+                    ]);
+
+                    var options = {
+                      title: \''.$strstattitle.'\',
+                      is3D: true,
+                      slices: {
+                        0: { color: \'#D50F25\' },
+                        1: { color: \'#3b5998\' },
+                        2: { color: \'#eee\', fontcolor: \'black\'},
+                        3: { color: \'#007bb6\'},
+                        4: { color: \'#7cbb00\'},
+                        5: { color: \'#007ee5\'},
+                        6: { color: \'#45668e\'},
+                        7: { color: \'#00B4FF\'},
+                        8: { color: \'#ee7600\'}
+                      }
+                    };
+
+                    var chart = new google.visualization.PieChart(document.getElementById(\'piechart\'));
+
+                    chart.draw(data, options);
+                  }
+                </script>
+             <div id="piechart" style="width: 900px; height: 500px;"></div>
+            </center>
+        ';
     }
 
     /**
@@ -489,6 +758,14 @@ class auth_plugin_googleoauth2 extends auth_plugin_base {
         set_config('saveaccesstoken', $config->donotcreatenewuser, 'auth/googleoauth2');
         set_config('providerlinksstyle', $config->providerlinksstyle, 'auth/googleoauth2');
 
+        //XTEC ************ AFEGIT - To restrict domain
+        //2014.09.16 @pferre22
+        if (!isset($config->auth_domain)) {
+            $config->auth_domain = '';
+        }
+        set_config('auth_domain', $config->auth_domain, 'auth/googleoauth2');
+        //***********************FI
+
         return true;
     }
 
@@ -508,4 +785,32 @@ class auth_plugin_googleoauth2 extends auth_plugin_base {
         }
         return true;
     }
+
+    //XTEC ************ AFEGIT - To restrict domain
+    //2014.09.16 @pferre22
+    function email_auth_domain($email) {
+        $auth_domain = get_config('auth/googleoauth2', 'auth_domain');
+        if (!empty($auth_domain)) {
+            $allowed = explode(' ', $auth_domain);
+            foreach ($allowed as $allowedpattern) {
+                $allowedpattern = trim($allowedpattern);
+                if (!$allowedpattern) {
+                    continue;
+                }
+                if (strpos($allowedpattern, '.') === 0) {
+                    if (strpos(strrev($email), strrev($allowedpattern)) === 0) {
+                        // Subdomains are in a form ".example.com" - matches "xxx@anything.example.com".
+                        return true;
+                    }
+
+                } else if (strpos(strrev($email), strrev('@'.$allowedpattern)) === 0) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        return true;
+    }
+    //************* FI
+
 }
