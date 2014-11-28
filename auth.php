@@ -243,24 +243,65 @@ class auth_plugin_googleoauth2 extends auth_plugin_base {
 
                     // Get following incremented username.
                     $googleuserprefix = core_text::strtolower(get_config('auth/googleoauth2', 'googleuserprefix'));
-                    $lastusernumber = $this->config->lastusernumber;
-                    $lastusernumber = empty($lastusernumber) ? 1 : $lastusernumber + 1;
-
+                    //XTEC ************ MODIFICAT - Add username detection
+                    //2014.09.26 @pferre22
+                    $parts = explode('@', $userdetails->email);
+                    $username = $parts[0];
                     // Get a new lock for the resource, wait for it if needed.
                     if ($lock = $lockfactory->get_lock($resource, $timeout)) {
                         // Check the user doesn't exist.
-                        $nextuser = $DB->record_exists('user', array('username' => $userprefix.$lastusernumber));
-                        while ($nextuser) {
-                            $lastusernumber++;
-                            $nextuser = $DB->record_exists('user', array('username' => $userprefix.$lastusernumber));
+                        if ($DB->record_exists('user', array('username' => $username))) {
+                            $lastusernumber = $this->config->lastusernumber;
+                            $lastusernumber = empty($lastusernumber)? 1 : $lastusernumber++;
+                            //check the user doesn't exist
+                            $nextuser = $DB->record_exists('user', array('username' => $googleuserprefix.$lastusernumber));
+                            while ($nextuser) {
+                                $lastusernumber++;
+                                $nextuser = $DB->record_exists('user', array('username' => $googleuserprefix.$lastusernumber));
+                            }
+                            set_config('lastusernumber', $lastusernumber, 'auth/googleoauth2');
+                            $username = $googleuserprefix . $lastusernumber;
                         }
-                        set_config('lastusernumber', $lastusernumber, 'auth/googleoauth2');
-
-                        // Release the lock once finished.
-                        $lock->release();
                     } else {
                         // We did not get access to the resource in time, give up.
-                        throw new moodle_exception('errorcreatinguserlocktimeout','auth_googleoauth2');
+                        throw new moodle_exception('errorcreatinguserlocktimeout', 'auth_googleoauth2');
+                    }
+                    // ORIGINAL
+                    /*
+                    $lastusernumber = get_config('auth/googleoauth2', 'lastusernumber');
+                    $lastusernumber = empty($lastusernumber) ? 1 : $lastusernumber + 1;
+                    // Check the user doesn't exist.
+                    $nextuser = $DB->record_exists('user', array('username' => $googleuserprefix.$lastusernumber));
+                    while ($nextuser) {
+                        $lastusernumber++;
+                        $nextuser = $DB->record_exists('user', array('username' => $googleuserprefix.$lastusernumber));
+                    }
+                    set_config('lastusernumber', $lastusernumber, 'auth/googleoauth2');
+                    $username = $googleuserprefix . $lastusernumber;
+                    */
+                    ////************ FI
+
+                    // Retrieve more information from the provider.
+                    $newuser = new stdClass();
+                    $newuser->email = $userdetails->email;
+
+                    switch ($authprovider) {
+                        case 'battlenet':
+                            // Battlenet as no firstname/lastname notion.
+                            $newuser->firstname = $userdetails->display_name;
+                            $newuser->lastname = '['.$userdetails->clan_tag.']';
+                            break;
+                        case 'github':
+                        case 'dropbox':
+                            // As Github/Dropbox doesn't provide firstname/lastname, we'll split the name at the first whitespace.
+                            $githubusername = explode(' ', $userdetails->name, 2);
+                            $newuser->firstname = $githubusername[0];
+                            $newuser->lastname = $githubusername[1];
+                            break;
+                        default:
+                            $newuser->firstname = $userdetails->firstName;
+                            $newuser->lastname = $userdetails->lastName;
+                            break;
                     }
 
                     $username = $userprefix . $lastusernumber;
