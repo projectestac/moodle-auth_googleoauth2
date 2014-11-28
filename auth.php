@@ -331,10 +331,20 @@ class auth_plugin_googleoauth2 extends auth_plugin_base {
                             $userinfo = json_decode($userinfo);
                             $newuser->auth = 'googleoauth2';
                             if (!empty($userinfo->name->givenName)) {
-                                $newuser->firstname = $userinfo->name->givenName;
+                                //XTEC ************ MODIFICAT - Convert names to Title
+                                //2014.09.19 @pferre22
+                                $newuser->firstname = core_text::strtotitle($userinfo->name->givenName);
+                                // ORIGINAL
+                                //$newuser->firstname = $userinfo->name->givenName;
+                                //************ FI
                             }
                             if (!empty($userinfo->name->familyName)) {
-                                $newuser->lastname = $userinfo->name->familyName;
+                                //XTEC ************ MODIFICAT - Convert names to Title
+                                //2014.09.19 @pferre22
+                                $newuser->lastname = core_text::strtotitle($userinfo->name->familyName);
+                                // ORIGINAL
+                                //$newuser->lastname = $userinfo->name->familyName;
+                                //************ FI
                             }
                             if (!empty($userinfo->locale)) {
                                 //$newuser->lang = $userinfo->locale;
