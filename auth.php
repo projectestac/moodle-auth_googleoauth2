@@ -288,6 +288,24 @@ class auth_plugin_googleoauth2 extends auth_plugin_base {
 
                     //get following incremented username
                     $googleuserprefix = core_text::strtolower(get_config('auth/googleoauth2', 'googleuserprefix'));
+                    //XTEC ************ MODIFICAT - Add username detection
+                    //2014.09.26 @pferre22
+                    $parts = explode('@', $useremail);
+                    $username = $parts[0];
+                    if ($DB->record_exists('user', array('username' => $username))) {
+                        $lastusernumber = get_config('auth/googleoauth2', 'lastusernumber');
+                        $lastusernumber = empty($lastusernumber)? 1 : $lastusernumber++;
+                        //check the user doesn't exist
+                        $nextuser = $DB->record_exists('user', array('username' => $googleuserprefix.$lastusernumber));
+                        while ($nextuser) {
+                            $lastusernumber++;
+                            $nextuser = $DB->record_exists('user', array('username' => $googleuserprefix.$lastusernumber));
+                        }
+                        set_config('lastusernumber', $lastusernumber, 'auth/googleoauth2');
+                        $username = $googleuserprefix . $lastusernumber;
+                    }
+                    // ORIGINAL
+                    /*
                     $lastusernumber = get_config('auth/googleoauth2', 'lastusernumber');
                     $lastusernumber = empty($lastusernumber)? 1 : $lastusernumber++;
                     //check the user doesn't exist
@@ -298,6 +316,8 @@ class auth_plugin_googleoauth2 extends auth_plugin_base {
                     }
                     set_config('lastusernumber', $lastusernumber, 'auth/googleoauth2');
                     $username = $googleuserprefix . $lastusernumber;
+                    */
+                    ////************ FI
 
                     //retrieve more information from the provider
                     $newuser = new stdClass();
