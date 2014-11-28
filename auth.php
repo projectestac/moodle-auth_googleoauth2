@@ -669,6 +669,9 @@ class auth_plugin_googleoauth2 extends auth_plugin_base {
 
         echo '</td></tr>';
 
+        //XTEC ************ ELIMINAT - This setting is not needed for now
+        //2014.08.15  @pferre22
+        /*
         // Display buttons.
 
         echo '<tr>
@@ -693,6 +696,8 @@ class auth_plugin_googleoauth2 extends auth_plugin_base {
         print_string('oauth2displaybuttonshelp', 'auth_googleoauth2', $code);
 
         echo '</td></tr>';
+        */
+        //************ FI
 
 
         // Block field options.
