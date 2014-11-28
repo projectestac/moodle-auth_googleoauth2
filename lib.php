@@ -46,11 +46,8 @@ function googleoauth2_html_button($authurl, $providerdisplaystyle, $provider) {
  * @return array
  */
 function provider_list() {
-    global $CFG;
-    $providerInstances = array_diff(scandir($CFG->dirroot.'/auth/googleoauth2/classes/provider'), array('..', '.'));
-    foreach ($providerInstances as $providerInstance) {
-	$providers[]=substr($providerInstance,0,-4);
-    }
+    // XTEC ----- Modificat -- only google @svallde2.
+    $providers = array('google');
     return $providers;
 }
 
@@ -167,7 +164,7 @@ function auth_googleoauth2_render_buttons() {
             $provider = new $providerclassname();
             $authurl = $provider->getAuthorizationUrl();
             set_state_token($providername, $provider->getState());
-    
+
             // Check if we should display the button.
             $providerisenabled = $provider->isenabled();
             $providerscount = $providerisenabled ? $providerscount + 1 : $providerscount;
