@@ -502,7 +502,12 @@ class auth_plugin_googleoauth2 extends auth_plugin_base {
     public function config_form($config, $err, $userfields) {
         global $OUTPUT, $CFG;
 
+        //XTEC ************ ELIMINAT - No needed alert
+        //2016.02.09 @pferre22
+        /*
         echo '<div class="alert alert-success"  role="alert">' . get_string('supportmaintenance', 'auth_googleoauth2') . '</div>';
+        */
+        //***********************FI
 
 
         // TODO: replace this table html ugliness by some nice bootstrap html code.
@@ -625,6 +630,9 @@ class auth_plugin_googleoauth2 extends auth_plugin_base {
             $config->oauth2displaybuttons = 1;
         }
 
+        //XTEC ************ ELIMINAT - No needed setting
+        //2016.02.09 @pferre22
+        /*
         // IPinfoDB.
 
         echo '<tr>
@@ -647,6 +655,8 @@ class auth_plugin_googleoauth2 extends auth_plugin_base {
         print_string('auth_googleipinfodbkey', 'auth_googleoauth2', (object) array('website' => $CFG->wwwroot));
 
         echo '</td></tr>';
+        */
+        //***********************FI
 
         // User prefix.
 
@@ -812,13 +822,12 @@ class auth_plugin_googleoauth2 extends auth_plugin_base {
             $config->providerlinksstyle = 'horizontal';
         }
 
-        set_config('googleipinfodbkey', $config->googleipinfodbkey, 'auth/googleoauth2');
-        set_config('userprefix', core_text::strtolower($config->userprefix), 'auth/googleoauth2');
-        set_config('displaybuttons', $config->displaybuttons, 'auth/googleoauth2');
-        set_config('authdomains', $config->authdomains, 'auth/googleoauth2');
-        set_config('donotcreatenewuser', $config->donotcreatenewuser, 'auth/googleoauth2');
-        set_config('saveaccesstoken', $config->donotcreatenewuser, 'auth/googleoauth2');
-        set_config('providerlinksstyle', $config->providerlinksstyle, 'auth/googleoauth2');
+        //XTEC ************ MODIFICAT - No needed settings
+        //2016.02.09 @pferre22
+        set_config('googleipinfodbkey', "", 'auth/googleoauth2');
+        set_config('googleuserprefix', core_text::strtolower($config->googleuserprefix), 'auth/googleoauth2');
+        set_config('oauth2displaybuttons', 1, 'auth/googleoauth2');
+        //********************FI
 
         //XTEC ************ AFEGIT - To restrict domain
         //2014.09.16 @pferre22
